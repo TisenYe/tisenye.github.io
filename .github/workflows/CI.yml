@@ -14,6 +14,4 @@ jobs:
           # Target branch
           PAGES_BRANCH: gh-pages
           # Provide personal access token
-          TOKEN: ${{ secrets.TOKEN }}
-          # Or if publishing to the same repo, use the automatic token
-          #TOKEN: ${{ secrets.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 }}
+          TOKEN: ${{ secrets.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  }}

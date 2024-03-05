@@ -1,3 +1,6 @@
 [submodule "themes/adidoks"]
 	path = themes/adidoks
 	url = https://github.com/aaranxu/adidoks.git
+[submodule "themes/ataraxia"]
+	path = themes/ataraxia
+	url = https://github.com/gersonbenavides/ataraxia-zola.git

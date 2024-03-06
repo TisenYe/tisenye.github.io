@@ -1,4 +1,5 @@
 # The base URL of the site.
+#base_url = "127.0.0.1"
 base_url = "https://tisenye.github.io/"
 
 # To avoid problems with some variables due to multilingual support,
@@ -29,7 +30,7 @@ hard_link_static = false
     author = "Tisen Ye"
 
     # Use a square image (same height as width)
-    avatar = "images/avatar.png"
+    avatar = "images/avatar.jpg"
 
     # To use a favicon convert your image to https://realfavicongenerator.net/,
     # then download and copy the package to static/images/favicon
@@ -42,8 +43,8 @@ hard_link_static = false
         nav = [
             { name = "Home", url = "@/_index.md", icon = "bi-house" },
             { name = "Blog", url = "@/blog/_index.md", icon = "bi-file-earmark-text" },
-            { name = "Author", url = "https://gersonbdev.github.io/", icon = "bi-person" },
-            { name = "About", url = "https://github.com/gersonbdev/ataraxia-zola", icon = "bi-question-octagon" }
+            { name = "Proyectos", url = "@/projects/_index.md", icon = "bi-terminal" },
+            { name = "Categorías", url = "https://tisenye.github.io/categories", icon = "bi-bookmarks" },
         ]
     
     [extra.social]
@@ -51,10 +52,10 @@ hard_link_static = false
         twitter = "@user"
         links = [
             { name = "Email", url = "mailto:1600037849@qq.com", icon = "bi-envelope-fill" },
-            { name = "GitHub", url = "https://github.com/", icon = "bi-github" },
+            { name = "GitHub", url = "https://github.com/TisenYe", icon = "bi-github" },
             { name = "Twitter", url = "https://twitter.com/", icon = "bi-twitter" },
-            { name = "LinkedIn", url = "https://www.linkedin.com/", icon = "bi-linkedin" },
-            { name = "Facebook", url = "https://www.facebook.com/", icon = "bi-facebook" }
+            #{ name = "LinkedIn", url = "https://www.linkedin.com/", icon = "bi-linkedin" },
+            #{ name = "Facebook", url = "https://www.facebook.com/", icon = "bi-facebook" }
         ]
 
     [extra.seo]
@@ -71,7 +72,7 @@ hard_link_static = false
 
 [languages]
     [languages.en]
-        title = "Tisen's Blog"
+        title = "Tisen"
         description = "tisen's blog"
         generate_feed = true
         feed_filename = "atom.xml"

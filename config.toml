@@ -15,8 +15,8 @@ theme = "ataraxia"
 output_dir = "public"
 
 build_search_index = true
-generate_feed = true
-feed_filename = "atom.xml"
+generate_feeds = true
+feed_filenames = ["atom.xml"]
 # feed_limit = 20
 
 compile_sass = false
@@ -74,8 +74,8 @@ hard_link_static = false
     [languages.en]
         title = "Tisen"
         description = "tisen's blog"
-        generate_feed = true
-        feed_filename = "atom.xml"
+        generate_feeds = true
+        feed_filenames = ["atom.xml"]
         taxonomies = [
             { name = "tags", feed = true, paginate_by = 5  },
             { name = "categories", feed = true, paginate_by = 5 },

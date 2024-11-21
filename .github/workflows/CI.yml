@@ -12,6 +12,7 @@ on:
 
 jobs:
   build:
+    name: Project build
     runs-on: ubuntu-latest
     if: github.ref != 'refs/heads/main'
     steps:
@@ -25,7 +26,7 @@ jobs:
           BUILD_FLAGS: --drafts
 
   build_and_deploy:
-    name: Publish site
+    name: Publish site deploy
     runs-on: ubuntu-latest
     steps:
     - name: Checkout main

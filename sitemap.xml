@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://tisenye.github.io/</loc>
+    </url>
+    <url>
+        <loc>https://tisenye.github.io/blog/</loc>
+    </url>
+    <url>
+        <loc>https://tisenye.github.io/blog/hola-mundo/</loc>
+        <lastmod>2024-03-07</lastmod>
+    </url>
+    <url>
+        <loc>https://tisenye.github.io/blog/page/1/</loc>
+    </url>
+    <url>
+        <loc>https://tisenye.github.io/categories/</loc>
+    </url>
+    <url>
+        <loc>https://tisenye.github.io/categories/news/</loc>
+    </url>
+    <url>
+        <loc>https://tisenye.github.io/categories/news/page/1/</loc>
+    </url>
+    <url>
+        <loc>https://tisenye.github.io/projects/</loc>
+    </url>
+    <url>
+        <loc>https://tisenye.github.io/tags/</loc>
+    </url>
+    <url>
+        <loc>https://tisenye.github.io/tags/website/</loc>
+    </url>
+    <url>
+        <loc>https://tisenye.github.io/tags/website/page/1/</loc>
+    </url>
+</urlset>

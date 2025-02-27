@@ -1,6 +1,6 @@
 # The base URL of the site.
 #base_url = "127.0.0.1"
-base_url = "https://tisenye.github.io/"
+base_url = "https://tisenye.com/"
 
 # To avoid problems with some variables due to multilingual support,
 # you will find repeated variables in the language section,
@@ -108,16 +108,17 @@ hard_link_static = false
 
 [markdown]
     highlight_code = true
-    # extra_syntaxes_and_themes = []
-    highlight_theme = "gruvbox-dark"
+    #highlight_theme = "kronuz"
+	highlight_themes_css = [
+	  { theme = "base16-ocean-dark", filename = "prism-one-dark.css" },
+	]
+	syntax_highlighting = true
 
     render_emoji = true
-
 
     external_links_target_blank = true
     external_links_no_follow = true
     external_links_no_referrer = true
-
     smart_punctuation = false
 
 

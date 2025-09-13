@@ -6,8 +6,8 @@ slug = "docker bpf dev"
 draft = false
 
 [taxonomies] 
-  categories = ["news"] 
-  tags = ["website"]
+  categories = ["devlop"]
+  tags = ["docker", "BPF"]
 
 [extra]
   page_identifier = "blog-2025-01"

@@ -42,9 +42,9 @@ hard_link_static = false
     [extra.menus]
         nav = [
             { name = "Home", url = "@/_index.md", icon = "bi-house" },
-            { name = "Blog", url = "@/blog/_index.md", icon = "bi-file-earmark-text" },
-            { name = "Proyectos", url = "@/projects/_index.md", icon = "bi-terminal" },
-            { name = "Categorías", url = "https://tisenye.github.io/categories", icon = "bi-bookmarks" },
+            { name = "Post", url = "@/blog/_index.md", icon = "bi-file-earmark-text" },
+            { name = "Projects", url = "@/projects/_index.md", icon = "bi-terminal" },
+            { name = "Categories", url = "https://tisenye.github.io/categories", icon = "bi-bookmarks" },
         ]
     
     [extra.social]
@@ -73,7 +73,7 @@ hard_link_static = false
 [languages]
     [languages.en]
         title = "Tisen"
-        description = "tisen's blog"
+        description = "Blog"
         generate_feeds = true
         feed_filenames = ["atom.xml"]
         taxonomies = [

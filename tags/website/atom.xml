@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>Tisen - website</title>
+    <subtitle>Blog</subtitle>
+    <link rel="self" type="application/atom+xml" href="https://tisenye.com/tags/website/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://tisenye.com/"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2024-03-07T00:00:00+00:00</updated>
+    <id>https://tisenye.com/tags/website/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Hello World</title>
+        <published>2024-03-07T00:00:00+00:00</published>
+        <updated>2024-03-07T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://tisenye.com/blog/hola-mundo/"/>
+        <id>https://tisenye.com/blog/hola-mundo/</id>
+        
+        <content type="html" xml:base="https://tisenye.com/blog/hola-mundo/">&lt;p&gt;🎉🎉🎉🎉🎉 Hello my web site&lt;&#x2F;p&gt;
+&lt;h5 id=&quot;posixzhong-ding-yi-de-bu-fen-wen-jian-yuan-shu-ju&quot;&gt;POSIX中定义的部分文件元数据&lt;&#x2F;h5&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;文件元数据&lt;&#x2F;th&gt;&lt;th&gt;说明&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;mode&lt;&#x2F;td&gt;&lt;td&gt;文件模式，其中包括文件类型和文件权限&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;nlink&lt;&#x2F;td&gt;&lt;td&gt;指向此文件的链接个数&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;uid&lt;&#x2F;td&gt;&lt;td&gt;文件所属用户的id&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;gid&lt;&#x2F;td&gt;&lt;td&gt;文件所属用户组的id&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;size&lt;&#x2F;td&gt;&lt;td&gt;文件的大小&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;atime&lt;&#x2F;td&gt;&lt;td&gt;文件数据最近访问时间&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;ctime&lt;&#x2F;td&gt;&lt;td&gt;文件元数据最近修改时间&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;mtime&lt;&#x2F;td&gt;&lt;td&gt;文件数据最近修改时间&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;h5 id=&quot;linuxzhong-zhi-chi-de-wen-jian-lei-xing&quot;&gt;Linux中支持的文件类型&lt;&#x2F;h5&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;文件类型&lt;&#x2F;th&gt;&lt;th&gt;文件用途&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;常规文件&lt;&#x2F;td&gt;&lt;td&gt;保存数据&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;目录文件&lt;&#x2F;td&gt;&lt;td&gt;表示和组织一组文件&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;符号链接文件&lt;&#x2F;td&gt;&lt;td&gt;保存符号链接(指向目标文件的路径)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;FIFO文件&lt;&#x2F;td&gt;&lt;td&gt;以队列形式传递数据,又称命名管道&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;套接字文件&lt;&#x2F;td&gt;&lt;td&gt;用于传递数据,比FIFO文件更加灵活&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;字符设备文件&lt;&#x2F;td&gt;&lt;td&gt;表示和访问字符设备&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;块设备文件&lt;&#x2F;td&gt;&lt;td&gt;表示和访问块设备&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;h2 id=&quot;command&quot;&gt;Command&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;shell&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-shell &quot;&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;&lt;span&gt;# 列出当前目录下所有文件和子目录的大小，包括隐藏文件。 -r表示逆序。
+&lt;&#x2F;span&gt;&lt;span&gt;du -ah | sort -rh
+&lt;&#x2F;span&gt;&lt;span&gt;# --max-depth=1 限制输出的深度为 1
+&lt;&#x2F;span&gt;&lt;span&gt;du -ah --max-depth=1
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;# 以人类可读的格式（例如 KB、MB、GB）显示磁盘使用情况。
+&lt;&#x2F;span&gt;&lt;span&gt;df -h
+&lt;&#x2F;span&gt;&lt;span&gt;# 显示每个文件系统的 inode 使用情况，包括总 inode 数量、已用 inode 数量和可用 inode 数量。
+&lt;&#x2F;span&gt;&lt;span&gt;df -i
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h3 id=&quot;gdisk&quot;&gt;gdisk&lt;&#x2F;h3&gt;
+</content>
+        
+    </entry>
+</feed>

@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>Tisen - devlop</title>
+    <subtitle>Blog</subtitle>
+    <link rel="self" type="application/atom+xml" href="https://tisenye.com/categories/devlop/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://tisenye.com/"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2025-02-10T00:00:00+00:00</updated>
+    <id>https://tisenye.com/categories/devlop/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Docker Desktop进行 BPF 开发</title>
+        <published>2025-02-10T00:00:00+00:00</published>
+        <updated>2025-02-10T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://tisenye.com/blog/docker-bpf-dev/"/>
+        <id>https://tisenye.com/blog/docker-bpf-dev/</id>
+        
+        <content type="html" xml:base="https://tisenye.com/blog/docker-bpf-dev/">&lt;p&gt;通过Dockerfile.tools 来构建相应镜像，参考:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;luckymrwang.github.io&#x2F;2022&#x2F;05&#x2F;23&#x2F;%E4%BD%BF%E7%94%A8-Docker-Desktop%E8%BF%9B%E8%A1%8C-BPF-%E5%BC%80%E5%8F%91&#x2F;&quot;&gt;使用 Docker Desktop进行 BPF 开发&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;原文中的 Dockerfile.tools 有些地方需要修改一下&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;有个 llvm 版本的报错 &lt;code&gt;undefined reference to getPollyPluginInfo()&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;需要添加 zip 包&lt;&#x2F;li&gt;
+&lt;li&gt;通过 sed bcc&#x2F;&lt;strong&gt;init&lt;&#x2F;strong&gt;.py 的方式由于安装方式为 egg，因此无法直接 sed 需要注释掉，该&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;iovisor&#x2F;gobpf&#x2F;pull&#x2F;321&#x2F;commits&#x2F;1d78ac6cb237a6003e8f85b5abed1d2c297ca4cd&quot;&gt;bug已被修复&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;其中的&lt;strong&gt;for-desktop-kernel&lt;&#x2F;strong&gt;是我们从docker hub下载的内核相关的包资源。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;FROM&lt;&#x2F;span&gt;&lt;span&gt; docker&#x2F;for-desktop-kernel:5.10.47-0b705d955f5e283f62583c4e227d64a7924c138f AS ksrc
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;FROM&lt;&#x2F;span&gt;&lt;span&gt; ubuntu:20.04 AS bpftrace
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;COPY --from&lt;&#x2F;span&gt;&lt;span&gt;=ksrc &#x2F;kernel-dev.tar &#x2F;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;RUN&lt;&#x2F;span&gt;&lt;span&gt; tar xf kernel-dev.tar &amp;amp;&amp;amp; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;rm&lt;&#x2F;span&gt;&lt;span&gt; kernel-dev.tar
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# 使用阿里云镜像加速 Ubuntu 软件源
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;RUN&lt;&#x2F;span&gt;&lt;span&gt; sed&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt; -i &lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;s&#x2F;archive.ubuntu.com&#x2F;mirrors.aliyun.com&#x2F;&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39; &#x2F;etc&#x2F;apt&#x2F;sources.list
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# 安装 LLVM 10（确保版本至少为 10.0.1）及 Clang
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;RUN&lt;&#x2F;span&gt;&lt;span&gt; apt-get update &amp;amp;&amp;amp; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;apt-get&lt;&#x2F;span&gt;&lt;span&gt; install&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt; -y&lt;&#x2F;span&gt;&lt;span&gt; wget zip lsb-release software-properties-common &amp;amp;&amp;amp; \
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;wget&lt;&#x2F;span&gt;&lt;span&gt; https:&#x2F;&#x2F;apt.llvm.org&#x2F;llvm.sh &amp;amp;&amp;amp; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;chmod&lt;&#x2F;span&gt;&lt;span&gt; +x llvm.sh &amp;amp;&amp;amp; \
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;.&#x2F;llvm.sh&lt;&#x2F;span&gt;&lt;span&gt; 10 &amp;amp;&amp;amp; \
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;apt-get&lt;&#x2F;span&gt;&lt;span&gt; install&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt; -y&lt;&#x2F;span&gt;&lt;span&gt; llvm-10 clang-10 libclang-10-dev
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;ENV&lt;&#x2F;span&gt;&lt;span&gt; PATH &amp;quot;$&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;PATH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;:&#x2F;usr&#x2F;lib&#x2F;llvm-10&#x2F;bin&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# 安装 bpftrace
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;RUN&lt;&#x2F;span&gt;&lt;span&gt; apt-get install&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt; -y&lt;&#x2F;span&gt;&lt;span&gt; bpftrace
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# 安装 bcc 的构建依赖，并创建 Python 的软链接
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;WORKDIR&lt;&#x2F;span&gt;&lt;span&gt; &#x2F;root
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;RUN&lt;&#x2F;span&gt;&lt;span&gt; DEBIAN_FRONTEND=&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;noninteractive&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot; apt-get install&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt; -y &lt;&#x2F;span&gt;&lt;span&gt;\
+&lt;&#x2F;span&gt;&lt;span&gt;      kmod vim bison build-essential cmake flex git libedit-dev \
+&lt;&#x2F;span&gt;&lt;span&gt;      libcap-dev zlib1g-dev libelf-dev libfl-dev \
+&lt;&#x2F;span&gt;&lt;span&gt;      python3.8 python3-pip python3.8-dev clang libclang-dev &amp;amp;&amp;amp; \
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;ln -s &lt;&#x2F;span&gt;&lt;span&gt;$(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;which&lt;&#x2F;span&gt;&lt;span&gt; python3) &#x2F;usr&#x2F;bin&#x2F;python
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# 克隆 bcc 源码并对其 CMake 配置进行 patch，追加 Polly 库到链接列表
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;RUN&lt;&#x2F;span&gt;&lt;span&gt; git clone https:&#x2F;&#x2F;github.com&#x2F;iovisor&#x2F;bcc.git &amp;amp;&amp;amp; \
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;cd&lt;&#x2F;span&gt;&lt;span&gt; bcc &amp;amp;&amp;amp; \
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;echo &lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;list(APPEND clang_libs Polly PollyISL)&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot; &amp;gt;&amp;gt; cmake&#x2F;clang_libs.cmake
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# 编译并安装 bcc（包含 C++ 和 Python 部分）
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;WORKDIR&lt;&#x2F;span&gt;&lt;span&gt; &#x2F;root&#x2F;bcc&#x2F;build
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;RUN&lt;&#x2F;span&gt;&lt;span&gt; cmake .. &amp;amp;&amp;amp; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;make &lt;&#x2F;span&gt;&lt;span&gt;&amp;amp;&amp;amp; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;make&lt;&#x2F;span&gt;&lt;span&gt; install &amp;amp;&amp;amp; \
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;cmake -DPYTHON_CMD&lt;&#x2F;span&gt;&lt;span&gt;=python3 .. &amp;amp;&amp;amp; \
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;cd&lt;&#x2F;span&gt;&lt;span&gt; src&#x2F;python&#x2F; &amp;amp;&amp;amp; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;make &lt;&#x2F;span&gt;&lt;span&gt;&amp;amp;&amp;amp; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;make&lt;&#x2F;span&gt;&lt;span&gt; install &amp;amp;&amp;amp; \
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;#sed -i &amp;quot;s&#x2F;self._syscall_prefixes\[0\]&#x2F;self._syscall_prefixes\[1\]&#x2F;g&amp;quot; &#x2F;usr&#x2F;lib&#x2F;python3&#x2F;dist-packages&#x2F;bcc&#x2F;__init__.py
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# 容器启动时挂载 debugfs 并进入 bash
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;CMD&lt;&#x2F;span&gt;&lt;span&gt; mount&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt; -t&lt;&#x2F;span&gt;&lt;span&gt; debugfs debugfs &#x2F;sys&#x2F;kernel&#x2F;debug &amp;amp;&amp;amp; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;&#x2F;bin&#x2F;bash
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;原文中运行 ebpf-for-mac 是为了调试当前mac的应用进程，因此需要安装内核版本一致的相关资源。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;$&lt;&#x2F;span&gt;&lt;span&gt; docker run&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt; -it --rm &lt;&#x2F;span&gt;&lt;span&gt;\
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;  --name&lt;&#x2F;span&gt;&lt;span&gt; ebpf-for-mac \
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;  --privileged &lt;&#x2F;span&gt;&lt;span&gt;\
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;  -v&lt;&#x2F;span&gt;&lt;span&gt; &#x2F;lib&#x2F;modules:&#x2F;lib&#x2F;modules:ro \
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;  -v&lt;&#x2F;span&gt;&lt;span&gt; &#x2F;etc&#x2F;localtime:&#x2F;etc&#x2F;localtime:ro \
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;  --pid&lt;&#x2F;span&gt;&lt;span&gt;=host \
+&lt;&#x2F;span&gt;&lt;span&gt;  ebpf-for-mac
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;如果只是为了使用bpf需要修改一下。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;$&lt;&#x2F;span&gt;&lt;span&gt; docker run&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt; -it --rm &lt;&#x2F;span&gt;&lt;span&gt;\
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;  --name&lt;&#x2F;span&gt;&lt;span&gt; ebpf-for-mac \
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;  --privileged &lt;&#x2F;span&gt;&lt;span&gt;\
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;  -v&lt;&#x2F;span&gt;&lt;span&gt; &#x2F;etc&#x2F;localtime:&#x2F;etc&#x2F;localtime:ro \
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;  --pid&lt;&#x2F;span&gt;&lt;span&gt;=host \
+&lt;&#x2F;span&gt;&lt;span&gt;  ebpf-for-mac
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;进入docker后需要手动链接 build 目录&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;ln -sf &#x2F;usr&#x2F;src&#x2F;linux-headers-5.10.47-linuxkit&#x2F; &#x2F;lib&#x2F;modules&#x2F;6.10.14-linuxkit&#x2F;build&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;保存 docker&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# 
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;docker&lt;&#x2F;span&gt;&lt;span&gt; commit $(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;CONTAINER&lt;&#x2F;span&gt;&lt;span&gt; ID) ebpf-for-mac:latest
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;pre data-lang=&quot;c&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-c &quot;&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;static struct&lt;&#x2F;span&gt;&lt;span&gt; mmc_blk_data *&lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;mmc_blk_alloc_req&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; mmc_card *&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;card&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;					      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; device *&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;parent&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;					      sector_t &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;size&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;					      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;bool &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;default_ro&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;					      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;const char &lt;&#x2F;span&gt;&lt;span&gt;*&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;subname&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;					      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;area_type&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; mmc_blk_data *md;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int&lt;&#x2F;span&gt;&lt;span&gt; devidx, ret;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	devidx = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;ida_simple_get&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;mmc_blk_ida, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;, max_devices, GFP_KERNEL);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;if &lt;&#x2F;span&gt;&lt;span&gt;(devidx &amp;lt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;*
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;		 * We get -ENOSPC because there are no more any available
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;		 * devidx. The reason may be that, either userspace haven&amp;#39;t yet
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;		 * unmounted the partitions, which postpones mmc_blk_release()
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;		 * from being called, or the device has more partitions than
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;		 * what we support.
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;		 *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;if &lt;&#x2F;span&gt;&lt;span&gt;(devidx == -ENOSPC)
+&lt;&#x2F;span&gt;&lt;span&gt;			&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;dev_err&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;mmc_dev&lt;&#x2F;span&gt;&lt;span&gt;(card-&amp;gt;host),
+&lt;&#x2F;span&gt;&lt;span&gt;				&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;no more device IDs available&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;\n&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;ERR_PTR&lt;&#x2F;span&gt;&lt;span&gt;(devidx);
+&lt;&#x2F;span&gt;&lt;span&gt;	}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	md = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;kzalloc&lt;&#x2F;span&gt;&lt;span&gt;(sizeof(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; mmc_blk_data), GFP_KERNEL);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;if &lt;&#x2F;span&gt;&lt;span&gt;(!md) {
+&lt;&#x2F;span&gt;&lt;span&gt;		ret = -ENOMEM;
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;goto&lt;&#x2F;span&gt;&lt;span&gt; out;
+&lt;&#x2F;span&gt;&lt;span&gt;	}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+</content>
+        
+    </entry>
+</feed>

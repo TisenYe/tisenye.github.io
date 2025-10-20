@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BPF Source reader [1] - Tisen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap">
+  <link rel="stylesheet" href="https://tisenye.com/assets/css/custom.css">
+  <link rel="stylesheet" href="https://tisenye.com/assets/css/prism-one-dark.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css"><!--link rel="apple-touch-icon" sizes="180x180" href="https://tisenye.com/images/favicon/apple-touch-icon.png"-->
+    <!--link rel="icon" type="image/png" sizes="32x32" href="https://tisenye.com/images/favicon/favicon-32x32.png"-->
+    <!--link rel="icon" type="image/png" sizes="16x16" href="https://tisenye.com/images/favicon/favicon-16x16.png"-->
+    <!--link rel="manifest" href="https://tisenye.com/images/favicon/site.webmanifest"-->
+    <!--link rel="mask-icon" href="https://tisenye.com/images/favicon/safari-pinned-tab.svg" color="#5bbad5"-->
+    <link rel="icon" type="image/png" href="/images/favicon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/images/favicon/favicon.svg" />
+    <link rel="shortcut icon" href="/images/favicon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="MyWebSite" />
+    <link rel="manifest" href="/images/favicon/site.webmanifest" />
+    <meta name="msapplication-TileColor" content="#2d89ef">
+    <meta name="theme-color" content="#ffffff"><link rel="canonical" href="https://tisenye.com/blog/bpf-source-reader-1/" /><meta name="author" content="Tisen Ye"><meta name="description" content="内核BPF源码走读" /><meta property="article:published_time" content='2025-10-20' /><meta name="keywords" content="BPF,"><meta name="generator" content="Zola">
+  <meta property="og:title" content="BPF Source reader [1]" />
+  <meta property="og:url" content="https://tisenye.com/blog/bpf-source-reader-1/" /><meta property="og:description" content="内核BPF源码走读" /><meta property="og:site_name" content="Tisen" />
+  <meta property="og:locale" content="en_US" />
+  <meta name="twitter:card" content="summary" /><meta name="twitter:creator" content="@user" /><meta name="google-site-verification" content="0123457890abcdefg" />
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-0123456789"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0123456789');
+    </script>
+</head>
+<body>
+  <div class="container-fluid vh-100">
+    <div class="row h-100"><div
+    class="sidebar d-none d-lg-block col-lg-3 col-xl-2 mh-100 p-0 overflow-auto"
+  >
+    <aside class="d-flex flex-column justify-content-between h-100">
+      <div class="d-none d-md-block mb-4 pt-5 px-4 text-center">
+        <div class="sidebar-avatar mb-2 mx-auto border border-3 rounded-circle">
+          <a href="https://tisenye.github.io/" target="_blank" rel="noopener noreferrer">
+    <img
+      src="https://tisenye.com/images/blog.jpg"
+      alt="Tisen Ye"
+      class="img-fluid"
+    >
+  </a>
+        </div>
+        <div class="mb-1">
+          <a
+            href="https://tisenye.com/"
+            class="sidebar-title fs-5 fw-bold text-decoration-none"
+          >
+            Tisen
+          </a>
+        </div>
+        <div class="fw-light">
+          Blog
+        </div>
+      </div>
+
+      <div class="sidebar-nav list-group my-auto rounded-0 text-center"><a
+        href="https://tisenye.com/"
+        class="sidebar-nav-item list-group-item list-group-item-action border border-0"
+        data-bs-toggle="tooltip" data-bs-title="Home"
+      >
+        <span class="sidebar-nav-icon bi bi-house d-none fs-4"></span>
+        <span class="sidebar-nav-text d-none d-md-inline">
+          Home
+        </span>
+      </a><a
+        href="https://tisenye.com/blog/"
+        class="sidebar-nav-item list-group-item list-group-item-action border border-0"
+        data-bs-toggle="tooltip" data-bs-title="Post"
+      >
+        <span class="sidebar-nav-icon bi bi-file-earmark-text d-none fs-4"></span>
+        <span class="sidebar-nav-text d-none d-md-inline">
+          Post
+        </span>
+      </a><a
+        href="https://tisenye.com/projects/"
+        class="sidebar-nav-item list-group-item list-group-item-action border border-0"
+        data-bs-toggle="tooltip" data-bs-title="Projects"
+      >
+        <span class="sidebar-nav-icon bi bi-terminal d-none fs-4"></span>
+        <span class="sidebar-nav-text d-none d-md-inline">
+          Projects
+        </span>
+      </a><a
+        href="https://tisenye.github.io/categories"
+        class="sidebar-nav-item list-group-item list-group-item-action border border-0"
+        data-bs-toggle="tooltip" data-bs-title="Categories"
+      >
+        <span class="sidebar-nav-icon bi bi-bookmarks d-none fs-4"></span>
+        <span class="sidebar-nav-text d-none d-md-inline">
+          Categories
+        </span>
+      </a></div>
+
+      <div class="sidebar-social d-none d-md-block mt-4 pb-4 px-4">
+        <div class="container-fluid">
+          <div class="row justify-content-center">
+            <div class="col-auto px-2">
+        <a
+          href="mailto:1600037849@qq.com"
+          target="_blank" rel="noopener noreferrer"
+          data-bs-toggle="tooltip"
+          data-bs-title='Email'
+          class="text-decoration-none"
+        >
+          <span class="bi bi-envelope-fill"></span>
+        </a>
+      </div><div class="col-auto px-2">
+        <a
+          href="https://github.com/TisenYe"
+          target="_blank" rel="noopener noreferrer"
+          data-bs-toggle="tooltip"
+          data-bs-title='GitHub'
+          class="text-decoration-none"
+        >
+          <span class="bi bi-github"></span>
+        </a>
+      </div><div class="col-auto px-2">
+        <a
+          href="https://twitter.com/"
+          target="_blank" rel="noopener noreferrer"
+          data-bs-toggle="tooltip"
+          data-bs-title='Twitter'
+          class="text-decoration-none"
+        >
+          <span class="bi bi-twitter"></span>
+        </a>
+      </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div><div class="col mh-100 overflow-auto px-0"><nav
+    class="navbar navbar-expand navbar-bg-light sticky-top border-bottom"
+  >
+    <div class="container-fluid"><button
+        type="button"
+        class="btn d-block d-lg-none fs-5"
+        data-bs-toggle="offcanvas" data-bs-target="#offcanvas"
+        aria-controls="offcanvas"
+      >
+        <span class="bi bi-list"></span>
+      </button>
+      
+      <div class="col-8">
+        
+          <div class="row justify-content-center justify-content-lg-start p-2 ps-xl-3 text-center"><div class="col-auto d-none d-xl-block">
+        <a
+          href="https://tisenye.com/blog/"
+          class="text-decoration-none"
+        >
+          Blog
+        </a>
+      </div>
+      <div class="col-auto d-none d-xl-block">
+        <span class="text-secondary">
+          »
+        </span>
+      </div><div class="col-auto">
+      <span
+        class="d-inline d-sm-none text-secondary"
+        data-bs-toggle="tooltip"
+        data-bs-title="BPF Source reader [1]"
+      >
+        BPF Source reade…
+      </span>
+      <span
+        class="d-none d-sm-inline text-secondary"
+        data-bs-toggle="tooltip"
+        data-bs-title="BPF Source reader [1]"
+      >
+        BPF Source reader [1]
+      </span>
+    </div>
+  </div>
+        
+      </div>
+
+      <button
+    type="button" data-bs-toggle="modal" data-bs-target="#searchModal"
+    class="btn border border-0"
+  >
+    <span class="bi bi-search fs-5"></span>
+  </button>
+    </div>
+  </nav><div class="d-flex flex-column h-100"><main class="container">
+    <div class="row justify-content-center mt-5">
+      <div class="col-11 col-lg-10 col-xxl-9">
+        <h1 class="mb-3">
+          BPF Source reader [1]
+        </h1>
+        <div class="row mt-3 mb-2">
+          <div class="col-auto">
+            <small class="text-muted">
+              By:
+              <a
+                href="https://tisenye.github.io/"
+                target="_blank" rel="noopener noreferrer"
+                class="text-decoration-none"
+              >
+                Tisen Ye
+              </a>
+            </small>
+          </div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-auto mb-2">
+            <small class="text-muted">
+              Posted:
+              <time datetime="2025-10-20">
+                <a 
+                  href="#" data-bs-toggle="tooltip"
+                  data-bs-title="Monday, October 20, 2025 12:00:00 AM UTC"
+                  class="text-muted text-decoration-none"
+                >
+                  October 20, 2025
+                </a>
+              </time>
+            </small>
+          </div>
+          
+        </div><div class="mb-5">
+          <blockquote>
+<p>分析源码版本为 Linux-6.16</p>
+</blockquote>
+<h2 id="bpf-attr">bpf_attr</h2>
+<p>bpf_attr 是一个 union 其中包含了很多匿名结构体和命名结构体以一种紧凑且模块化的方式表达多个不同的参数集合。在 bpf 中会通过 cmd 来区分如何解析 bpf_attr。</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#65737e;">// include/uapi/linux/bpf.h
+</span><span>
+</span><span style="color:#b48ead;">union </span><span>bpf_attr {
+</span><span>	</span><span style="color:#65737e;">// 通过 BPF_MAP_CREATE 来解析
+</span><span>	</span><span style="color:#b48ead;">struct </span><span>{ </span><span style="color:#65737e;">/* anonymous struct used by BPF_MAP_CREATE command */
+</span><span>		__u32	map_type;	</span><span style="color:#65737e;">/* one of enum bpf_map_type */
+</span><span>		__u32	key_size;	</span><span style="color:#65737e;">/* size of key in bytes */
+</span><span>		...
+</span><span>	};
+</span><span>	</span><span style="color:#65737e;">// 通过 BPF_MAP_*_ELEM 来解析
+</span><span>	</span><span style="color:#b48ead;">struct </span><span>{ </span><span style="color:#65737e;">/* anonymous struct used by BPF_MAP_*_ELEM commands */
+</span><span>		__u32		map_fd;
+</span><span>		__aligned_u64	key;
+</span><span>		</span><span style="color:#b48ead;">union </span><span>{
+</span><span>			__aligned_u64 value;
+</span><span>			__aligned_u64 next_key;
+</span><span>		};
+</span><span>		__u64		flags;
+</span><span>	};
+</span><span>	</span><span style="color:#65737e;">// 通过 BPF_MAP_*_BATCH 来解析
+</span><span>	</span><span style="color:#b48ead;">struct </span><span>{ </span><span style="color:#65737e;">/* struct used by BPF_MAP_*_BATCH commands */
+</span><span>		__aligned_u64	in_batch;	</span><span style="color:#65737e;">/* start batch,
+</span><span style="color:#65737e;">						 * NULL to start from beginning
+</span><span style="color:#65737e;">						 */
+</span><span>		...
+</span><span>	} batch;
+</span></code></pre>
+<h2 id="sys-bpf">__sys_bpf</h2>
+<p>通过 bpf 系统调用  执行 <code>__sys_bpf</code> 内核内部的通用实现函数。</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#65737e;">// kernel/bpf/syscall.c
+</span><span>
+</span><span style="color:#65737e;">// 用户态通过系统调用 bpf 触发 __sys_bpf
+</span><span style="color:#bf616a;">SYSCALL_DEFINE3</span><span>(bpf, </span><span style="color:#b48ead;">int</span><span>, cmd, </span><span style="color:#b48ead;">union</span><span> bpf_attr __user *, uattr, </span><span style="color:#b48ead;">unsigned int</span><span>, size)
+</span><span>{
+</span><span>	</span><span style="color:#b48ead;">return </span><span style="color:#bf616a;">__sys_bpf</span><span>(cmd, </span><span style="color:#bf616a;">USER_BPFPTR</span><span>(uattr), size);
+</span><span>}
+</span><span>
+</span><span style="color:#65737e;">// 内核态调用 bpf_sys_bpf 来触发 __sys_bpf
+</span><span style="color:#bf616a;">BPF_CALL_3</span><span>(bpf_sys_bpf, </span><span style="color:#b48ead;">int</span><span>, cmd, </span><span style="color:#b48ead;">union</span><span> bpf_attr *, attr, u32, attr_size)
+</span><span>{
+</span><span>	</span><span style="color:#b48ead;">switch </span><span>(cmd) {
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_CREATE:
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_DELETE_ELEM:
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_UPDATE_ELEM:
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_FREEZE:
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_GET_FD_BY_ID:
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_PROG_LOAD:
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_BTF_LOAD:
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_LINK_CREATE:
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_RAW_TRACEPOINT_OPEN:
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">default</span><span>:
+</span><span>		</span><span style="color:#b48ead;">return </span><span>-EINVAL;
+</span><span>	}
+</span><span>	</span><span style="color:#b48ead;">return </span><span style="color:#bf616a;">__sys_bpf</span><span>(cmd, </span><span style="color:#bf616a;">KERNEL_BPFPTR</span><span>(attr), attr_size);
+</span><span>}
+</span></code></pre>
+<p><code>__sys_bpf()</code> 是 Linux 内核中 <strong>BPF 系统调用实现的核心函数</strong>。</p>
+<p>它是 BPF 子系统的“系统调用调度器”指挥 bpf 指令安全的前往目的地，它做了三件事：</p>
+<ol>
+<li><strong>安全检查与参数复制（用户态 or 内核态）</strong></li>
+<li><strong>调用安全框架（LSM hook）</strong></li>
+<li><strong>根据命令号分派到具体实现函数</strong></li>
+</ol>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#65737e;">// kernel/bpf/syscall.c
+</span><span>
+</span><span style="color:#b48ead;">static int </span><span style="color:#8fa1b3;">__sys_bpf</span><span>(</span><span style="color:#b48ead;">enum</span><span> bpf_cmd </span><span style="color:#bf616a;">cmd</span><span>, bpfptr_t </span><span style="color:#bf616a;">uattr</span><span>, </span><span style="color:#b48ead;">unsigned int </span><span style="color:#bf616a;">size</span><span>)
+</span><span>{
+</span><span>	</span><span style="color:#b48ead;">union</span><span> bpf_attr attr;
+</span><span>	</span><span style="color:#b48ead;">int</span><span> err;
+</span><span>
+</span><span>	</span><span style="color:#65737e;">/* bpf_check_uarg_tail_zero 是一个安全检查函数。
+</span><span style="color:#65737e;">   	     * 参数 uattr 是一个 bpfptr_t，可能来自用户空间，也可能来自内核空间。
+</span><span style="color:#65737e;">   	     * 它的主要作用是确保用户空间传递过来的结构体参数，
+</span><span style="color:#65737e;">   	     * 如果比内核已知的结构体更大，多出来的部分必须全部为零。
+</span><span style="color:#65737e;">   	     * 这样可以防止新版本用户空间依赖内核尚未支持的扩展字段，保证内核的兼容性和安全性。
+</span><span style="color:#65737e;">   	     */
+</span><span>	err = </span><span style="color:#bf616a;">bpf_check_uarg_tail_zero</span><span>(uattr, sizeof(attr), size);
+</span><span>	</span><span style="color:#b48ead;">if </span><span>(err)
+</span><span>		</span><span style="color:#b48ead;">return</span><span> err;
+</span><span>	size = </span><span style="color:#bf616a;">min_t</span><span>(u32, size, sizeof(attr));
+</span><span>
+</span><span>	</span><span style="color:#65737e;">/* copy attributes from user space, may be less than sizeof(bpf_attr) */
+</span><span>	</span><span style="color:#96b5b4;">memset</span><span>(&amp;attr, </span><span style="color:#d08770;">0</span><span>, sizeof(attr));
+</span><span>	</span><span style="color:#b48ead;">if </span><span>(</span><span style="color:#bf616a;">copy_from_bpfptr</span><span>(&amp;attr, uattr, size) != </span><span style="color:#d08770;">0</span><span>)
+</span><span>		</span><span style="color:#b48ead;">return </span><span>-EFAULT;
+</span><span>
+</span><span>	</span><span style="color:#65737e;">/* security_bpf实现了对 LSM（Linux Security Module）的注册。
+</span><span style="color:#65737e;">	 * 通过 call_int_hook(bpf, cmd, attr, size, kernel); 宏
+</span><span style="color:#65737e;">	 * 分发给所有注册的安全模块（SELinux、AppArmor、Landlock 等）去审查。
+</span><span style="color:#65737e;">	 */
+</span><span>	err = </span><span style="color:#bf616a;">security_bpf</span><span>(cmd, &amp;attr, size, uattr.</span><span style="color:#bf616a;">is_kernel</span><span>);
+</span><span>	</span><span style="color:#b48ead;">if </span><span>(err &lt; </span><span style="color:#d08770;">0</span><span>)
+</span><span>		</span><span style="color:#b48ead;">return</span><span> err;
+</span><span>
+</span><span>	</span><span style="color:#65737e;">/* bpf 具体实现的入口，通过 cmd 来区分作用
+</span><span style="color:#65737e;">	 */
+</span><span>	</span><span style="color:#b48ead;">switch </span><span>(cmd) {
+</span><span>          </span><span style="color:#65737e;">/* Map 是 BPF 的“共享内存”，用于用户态和 BPF 程序之间传递数据。
+</span><span style="color:#65737e;">           * 下面的都是 Map 的增删改查等基础操作接口。
+</span><span style="color:#65737e;">           */
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_CREATE:
+</span><span>		err = </span><span style="color:#bf616a;">map_create</span><span>(&amp;attr, uattr.</span><span style="color:#bf616a;">is_kernel</span><span>);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_LOOKUP_ELEM:
+</span><span>		err = </span><span style="color:#bf616a;">map_lookup_elem</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_UPDATE_ELEM:
+</span><span>		err = </span><span style="color:#bf616a;">map_update_elem</span><span>(&amp;attr, uattr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_DELETE_ELEM:
+</span><span>		err = </span><span style="color:#bf616a;">map_delete_elem</span><span>(&amp;attr, uattr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_GET_NEXT_KEY:
+</span><span>		err = </span><span style="color:#bf616a;">map_get_next_key</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_FREEZE:
+</span><span>		err = </span><span style="color:#bf616a;">map_freeze</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>
+</span><span>	</span><span style="color:#65737e;">/* 将 BPF 程序加载进内核，经过 verifier 验证后生成一个可执行的内核对象。返回一个 FD。
+</span><span style="color:#65737e;">	 */
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_PROG_LOAD:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_prog_load</span><span>(&amp;attr, uattr, size);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>         </span><span style="color:#65737e;">/* 把 BPF 对象（map/prog/link）固定（pin）到 /sys/fs/bpf，实现跨进程持久化。
+</span><span style="color:#65737e;">          */
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_OBJ_PIN:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_obj_pin</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>         </span><span style="color:#65737e;">/* 从 bpffs 路径重新打开一个 pinned 对象。
+</span><span style="color:#65737e;">          */
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_OBJ_GET:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_obj_get</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>         </span><span style="color:#65737e;">/* 把程序 attach/detach 到某个 hook 点（如 cgroup、kprobe、tracepoint、XDP、tc 等）。
+</span><span style="color:#65737e;">          */
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_PROG_ATTACH:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_prog_attach</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_PROG_DETACH:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_prog_detach</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>          </span><span style="color:#65737e;">/* 查询某个 hook 上挂了哪些程序。
+</span><span style="color:#65737e;">           */
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_PROG_QUERY:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_prog_query</span><span>(&amp;attr, uattr.</span><span style="color:#bf616a;">user</span><span>);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_PROG_TEST_RUN:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_prog_test_run</span><span>(&amp;attr, uattr.</span><span style="color:#bf616a;">user</span><span>);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_PROG_GET_NEXT_ID:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_obj_get_next_id</span><span>(&amp;attr, uattr.</span><span style="color:#bf616a;">user</span><span>,
+</span><span>					  &amp;prog_idr, &amp;prog_idr_lock);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_GET_NEXT_ID:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_obj_get_next_id</span><span>(&amp;attr, uattr.</span><span style="color:#bf616a;">user</span><span>,
+</span><span>					  &amp;map_idr, &amp;map_idr_lock);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_BTF_GET_NEXT_ID:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_obj_get_next_id</span><span>(&amp;attr, uattr.</span><span style="color:#bf616a;">user</span><span>,
+</span><span>					  &amp;btf_idr, &amp;btf_idr_lock);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_PROG_GET_FD_BY_ID:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_prog_get_fd_by_id</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_GET_FD_BY_ID:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_map_get_fd_by_id</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_OBJ_GET_INFO_BY_FD:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_obj_get_info_by_fd</span><span>(&amp;attr, uattr.</span><span style="color:#bf616a;">user</span><span>);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_RAW_TRACEPOINT_OPEN:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_raw_tracepoint_open</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>          </span><span style="color:#65737e;">/* BTF 是 BPF 的类型系统描述信息，
+</span><span style="color:#65737e;">           * 用于支持高级调试、符号、CO-RE（Compile Once, Run Everywhere）。
+</span><span style="color:#65737e;">           * BPF_BTF_LOAD 把 BTF 类型信息加载进内核。
+</span><span style="color:#65737e;">           */
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_BTF_LOAD:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_btf_load</span><span>(&amp;attr, uattr, size);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_BTF_GET_FD_BY_ID:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_btf_get_fd_by_id</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_TASK_FD_QUERY:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_task_fd_query</span><span>(&amp;attr, uattr.</span><span style="color:#bf616a;">user</span><span>);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_LOOKUP_AND_DELETE_ELEM:
+</span><span>		err = </span><span style="color:#bf616a;">map_lookup_and_delete_elem</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>         </span><span style="color:#65737e;">/* 批量操作 map，性能优化接口。
+</span><span style="color:#65737e;">          */
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_LOOKUP_BATCH:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_map_do_batch</span><span>(&amp;attr, uattr.</span><span style="color:#bf616a;">user</span><span>, BPF_MAP_LOOKUP_BATCH);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_LOOKUP_AND_DELETE_BATCH:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_map_do_batch</span><span>(&amp;attr, uattr.</span><span style="color:#bf616a;">user</span><span>,
+</span><span>				       BPF_MAP_LOOKUP_AND_DELETE_BATCH);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_UPDATE_BATCH:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_map_do_batch</span><span>(&amp;attr, uattr.</span><span style="color:#bf616a;">user</span><span>, BPF_MAP_UPDATE_BATCH);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_MAP_DELETE_BATCH:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_map_do_batch</span><span>(&amp;attr, uattr.</span><span style="color:#bf616a;">user</span><span>, BPF_MAP_DELETE_BATCH);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>          </span><span style="color:#65737e;">/* BPF Link 是一种“持久 attach”机制。
+</span><span style="color:#65737e;">           * 它把“程序-挂载点”的绑定变成一个独立对象，可安全更新、替换、销毁。
+</span><span style="color:#65737e;">           * 创建一个 link，把 BPF 程序挂到指定 hook（tracepoint、LSM、cgroup、perf_event 等）。
+</span><span style="color:#65737e;">           */
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_LINK_CREATE:
+</span><span>		err = </span><span style="color:#bf616a;">link_create</span><span>(&amp;attr, uattr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_LINK_UPDATE:
+</span><span>		err = </span><span style="color:#bf616a;">link_update</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_LINK_GET_FD_BY_ID:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_link_get_fd_by_id</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_LINK_GET_NEXT_ID:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_obj_get_next_id</span><span>(&amp;attr, uattr.</span><span style="color:#bf616a;">user</span><span>,
+</span><span>					  &amp;link_idr, &amp;link_idr_lock);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>         </span><span style="color:#65737e;">/* 启用全局 BPF 统计数据（运行次数、验证器信息等）。
+</span><span style="color:#65737e;">          */
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_ENABLE_STATS:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_enable_stats</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>         </span><span style="color:#65737e;">/* 创建 BPF iterator（用 BPF 迭代内核数据结构，比如任务、sockets）。
+</span><span style="color:#65737e;">          */
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_ITER_CREATE:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_iter_create</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_LINK_DETACH:
+</span><span>		err = </span><span style="color:#bf616a;">link_detach</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>         </span><span style="color:#65737e;">/* 将 map 绑定到程序上，作为其持久依赖（防止被意外释放）。
+</span><span style="color:#65737e;">          */
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_PROG_BIND_MAP:
+</span><span>		err = </span><span style="color:#bf616a;">bpf_prog_bind_map</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">case</span><span> BPF_TOKEN_CREATE:
+</span><span>		err = </span><span style="color:#bf616a;">token_create</span><span>(&amp;attr);
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	</span><span style="color:#b48ead;">default</span><span>:
+</span><span>		err = -EINVAL;
+</span><span>		</span><span style="color:#b48ead;">break</span><span>;
+</span><span>	}
+</span><span>
+</span><span>	</span><span style="color:#b48ead;">return</span><span> err;
+</span><span>}
+</span></code></pre>
+<h2 id="bpftrace-ming-ling-de-yun-xing-guo-cheng-nei-he-bpfluo-ji">bpftrace 命令的运行过程——内核BPF逻辑</h2>
+<p><code>bpftrace</code> 是一个前端，通过编译字节码将BPF指令送入内核，由内核执行具体的BPF逻辑，其过程如下：</p>
+<ol>
+<li>
+<p>它把脚本（<code>BEGIN {}</code>, <code>kprobe:xxx {}</code>）解析成 <strong>AST（抽象语法树）</strong>。</p>
+</li>
+<li>
+<p>然后将其编译为 <strong>BPF 字节码（BPF 指令集）</strong>。</p>
+<ul>
+<li>
+<p>BPF 是一套独立于架构的指令系统，有自己的寄存器模型和栈。</p>
+</li>
+<li>
+<p>指令例如：</p>
+<pre data-lang="asm" style="background-color:#2b303b;color:#c0c5ce;" class="language-asm "><code class="language-asm" data-lang="asm"><span style="color:#8fa1b3;">r1 = ctx
+</span><span style="color:#b48ead;">call </span><span style="color:#8fa1b3;">bpf_get_current_comm
+</span><span style="color:#b48ead;">call </span><span style="color:#8fa1b3;">bpf_trace_printk
+</span></code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p><code>bpftrace</code> 通过 <code>libbpf</code> 或 <code>bpf()</code> 系统调用将这些字节码送入内核：</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#bf616a;">syscall</span><span>(__NR_bpf, BPF_PROG_LOAD, &amp;attr, sizeof(attr));
+</span></code></pre>
+<p><code>attr</code> 中包含：</p>
+<ul>
+<li>程序类型（如 <code>BPF_PROG_TYPE_KPROBE</code>）</li>
+<li>指令指针和大小</li>
+<li>license、附加选项等信息</li>
+</ul>
+</li>
+<li>
+<p>系统调用 <code>bpf()</code> 通过 <code>BPF_PROG_LOAD</code> 执行 <code>bpf_prog_load</code></p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">case</span><span> BPF_BTF_LOAD:
+</span><span>	err = </span><span style="color:#bf616a;">bpf_btf_load</span><span>(&amp;attr, uattr, size);
+</span><span>	</span><span style="color:#b48ead;">break</span><span>;
+</span></code></pre>
+</li>
+<li>
+<p>加载阶段：<code>bpf_prog_load()</code></p>
+<p>主要流程：</p>
+<ol>
+<li><strong>分配内核内存</strong> 用于存放 BPF 指令代码。</li>
+<li><strong>根据程序类型</strong>（如 KPROBE、TRACEPOINT、XDP）选择一个运行环境。</li>
+<li><strong>调用 verifier（验证器）</strong> 进行安全审查。</li>
+</ol>
+<ul>
+<li>验证内容包括：
+<ul>
+<li>是否有非法内存访问。</li>
+<li>是否可能死循环。</li>
+<li>栈空间是否越界。</li>
+<li>函数调用是否合法。</li>
+<li>map 操作是否类型匹配。</li>
+</ul>
+</li>
+<li>验证器会构建一个 <strong>控制流图（CFG）</strong> 并模拟执行每条指令。</li>
+</ul>
+<ol start="4">
+<li><strong>如果通过验证</strong>，就会把字节码交给 JIT 编译器（<code>bpf_prog_select_runtime</code>）。</li>
+</ol>
+</li>
+<li>
+<p>JIT 编译阶段：<code>bpf_int_jit_compile()</code></p>
+<p>JIT（Just-In-Time 编译器）将 BPF 字节码翻译成当前 CPU 架构的原生机器码。</p>
+<p>举个例子：</p>
+<pre data-lang="asm" style="background-color:#2b303b;color:#c0c5ce;" class="language-asm "><code class="language-asm" data-lang="asm"><span style="color:#8fa1b3;">r0 = </span><span style="color:#d08770;">0
+</span><span style="color:#b48ead;">call </span><span style="color:#8fa1b3;">bpf_get_current_comm
+</span></code></pre>
+<p>在 ARM64 上可能变成：</p>
+<pre data-lang="asm" style="background-color:#2b303b;color:#c0c5ce;" class="language-asm "><code class="language-asm" data-lang="asm"><span style="color:#b48ead;">mov </span><span style="color:#8fa1b3;">x0</span><span>, </span><span style="color:#bf616a;">sp
+</span><span style="color:#bf616a;">bl  </span><span style="color:#8fa1b3;">&lt;bpf_get_current_comm&gt;
+</span><span style="color:#b48ead;">mov </span><span style="color:#8fa1b3;">x0</span><span>, </span><span style="color:#8fa1b3;">#</span><span style="color:#d08770;">0
+</span><span style="color:#b48ead;">ret
+</span></code></pre>
+<p>这样一来，执行效率几乎等同于原生内核函数。</p>
+<p>JIT 编译的结果会缓存下来（/sys/kernel/debug/tracing/jit_dump 可查看）。</p>
+</li>
+<li>
+<p>Attach 阶段：建立触发点（Hook）</p>
+<p>加载完 BPF 程序后，bpftrace 再调用：</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#bf616a;">sys_bpf</span><span>(BPF_RAW_TRACEPOINT_OPEN, &amp;attr, sizeof(attr));
+</span></code></pre>
+<p>或</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#bf616a;">sys_bpf</span><span>(BPF_LINK_CREATE, &amp;attr, sizeof(attr));
+</span></code></pre>
+<p>这些命令会把 BPF 程序挂到指定的 hook：</p>
+<ul>
+<li><code>kprobe:sys_open</code> → kernel probe，拦截内核函数入口</li>
+<li><code>tracepoint:sched:sched_process_exec</code> → tracepoint hook</li>
+<li><code>uprobe:/bin/bash:malloc</code> → user-space probe</li>
+<li><code>BEGIN {}</code> → tracepoint “fake event”</li>
+</ul>
+<p>内核通过 <code>bpf_link</code> 或 <code>perf_event</code> 把这个程序注册到对应钩子点。
+当钩子被触发时，BPF 程序就会执行。</p>
+</li>
+<li>
+<p>执行阶段：内核执行 BPF 程序</p>
+<p>当事件发生（比如 <code>sys_open()</code> 被调用）时：</p>
+<ol>
+<li>
+<p>内核执行 kprobe 框架中的通知逻辑：</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">for</span><span> each attached BPF program:
+</span><span>    </span><span style="color:#bf616a;">run_bpf_prog</span><span>(prog, ctx)
+</span></code></pre>
+</li>
+<li>
+<p><code>run_bpf_prog()</code> 进入 <code>bpf_prog_run_xxx()</code>，执行 BPF 虚拟机或已 JIT 的机器码。</p>
+</li>
+<li>
+<p>BPF 程序通过 helper 调用访问内核信息：</p>
+<ul>
+<li><code>bpf_get_current_pid_tgid()</code></li>
+<li><code>bpf_trace_printk()</code></li>
+<li><code>bpf_map_lookup_elem()</code></li>
+<li><code>bpf_ktime_get_ns()</code> 等。</li>
+</ul>
+</li>
+<li>
+<p>程序运行结果可能：</p>
+<ul>
+<li>写入 BPF map</li>
+<li>通过 perfbuf 或 ringbuf 发消息到用户态</li>
+<li>返回过滤判断（比如 XDP drop/pass）</li>
+</ul>
+</li>
+</ol>
+</li>
+<li>
+<p>用户态收集结果</p>
+<p>bpftrace 监听这些 buffer：</p>
+<ul>
+<li><strong>perf event buffer</strong>：事件型输出（比如 <code>printf()</code>）</li>
+<li><strong>maps</strong>：周期性查询统计数据（比如 <code>@count</code>）</li>
+<li><strong>ring buffer</strong>：零拷贝高性能传输。</li>
+</ul>
+<p>bpftrace 会在后台用 epoll 监听这些文件描述符，当有数据可读时输出结果。</p>
+</li>
+<li>
+<p>结束与卸载</p>
+<p>当用户 Ctrl+C 或程序退出：</p>
+<ol>
+<li>
+<p>bpftrace 调用 <code>close(fd)</code>。</p>
+</li>
+<li>
+<p>内核引用计数减少。</p>
+</li>
+<li>
+<p>当没有引用时：</p>
+<ul>
+<li>程序（<code>bpf_prog</code>）</li>
+<li>maps</li>
+<li>link</li>
+</ul>
+<p>都会通过 RCU 延迟释放。</p>
+</li>
+</ol>
+</li>
+</ol>
+
+        </div>
+        
+          <div class="row my-1">
+            <div class="col-auto">
+              <span class="bi bi-bookmarks fs-6 me-1"></span>
+              
+    <a
+      href="https://tisenye.com/categories/source-reader/"
+      class="btn btn-taxonomy btn-sm m-1 border text-decoration-none"
+    >
+      <small>
+        source reader
+      </small>
+    </a>
+  
+    <a
+      href="https://tisenye.com/categories/kernel/"
+      class="btn btn-taxonomy btn-sm m-1 border text-decoration-none"
+    >
+      <small>
+        kernel
+      </small>
+    </a>
+  
+            </div>
+          </div>
+        
+        
+          <div class="row mt-1 mb-3">
+            <div class="col-auto">
+              <span class="bi bi-tags fs-6 me-1"></span>
+              
+    <a
+      href="https://tisenye.com/tags/bpf/"
+      class="btn btn-taxonomy btn-sm m-1 border text-decoration-none"
+    >
+      <small>
+        BPF
+      </small>
+    </a>
+  
+            </div>
+          </div>
+        
+      </div>
+    </div>
+  </main><div class="container">
+    <div class="row justify-content-center mt-3 mb-4">
+      <div class="col-11 col-lg-10 col-xxl-9"><div id="disqus_thread"></div>
+  <script>        
+    var disqus_config = function () {
+      this.page.url = 'https://tisenye.com/blog/bpf-source-reader-1/';  
+
+      this.page.identifier = 'blog-2025_10_20_1'; 
+    };
+    
+    (function() {
+      var d = document, s = d.createElement('script');
+      
+      s.src = 'https://user.disqus.com/embed.js';
+      
+      s.setAttribute('data-timestamp', +new Date());
+      (d.head || d.body).appendChild(s);
+    })();
+  </script>
+  <noscript>
+    Please enable JavaScript to view the 
+    <a href="https://disqus.com/?ref_noscript" rel="nofollow">
+      comments powered by Disqus.
+    </a>
+  </noscript></div>
+    </div>
+  </div><footer class="container-fluid mt-auto">
+    <div class="row justify-content-center">
+      <div class="col-10">
+        <div class="row pt-3 pb-4 border-top">
+          <div class="col-12 col-md-6 mb-2 mb-md-0 text-center text-md-start">
+            <small class="text-secondary">
+              © 2025
+              <a 
+                href="https://tisenye.github.io/"
+                target="_blank" rel="noopener noreferrer"
+                class="text-decoration-none"
+              >
+                Tisen Ye&period;
+              </a>
+              <a
+                href="https://creativecommons.org/licenses/by/4.0/"
+                data-bs-toggle="tooltip"
+                data-bs-title="Except where otherwise noted, the blog posts on this site are licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) License by the author."
+                class="text-secondary text-decoration-none"
+              >
+                Some rights reserved.
+              </a>
+            </small>
+          </div>
+          <div class="col-12 col-md-6 text-center text-md-end">
+            <small class="text-secondary">
+              Powered by
+              <a 
+                href="https://www.getzola.org/"
+                target="_blank" rel="noopener noreferrer"
+                class="text-decoration-none"
+              >
+                Zola
+              </a>
+              with
+              <a 
+                href="https://github.com/gersonbdev/ataraxia-zola"
+                target="_blank" rel="noopener noreferrer"
+                class="text-decoration-none"
+              >
+                Ataraxia
+              </a>
+              theme.
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvas" aria-labelledby="offcanvasLabel">
+    <div class="offcanvas-body p-0">
+      <div class="sidebar container-fluid vh-100">
+        <div class="row h-100">
+          <div
+            class="col mh-100 px-0 overflow-auto"
+          >
+            <aside class="d-flex flex-column justify-content-between h-100">
+              <div class="mb-4 pt-5 px-3 text-center">
+                <div class="sidebar-avatar mb-2 mx-auto border border-3 rounded-circle">
+                  <a href="https://tisenye.github.io/" target="_blank" rel="noopener noreferrer">
+    <img
+      src="https://tisenye.com/images/blog.jpg"
+      alt="Tisen Ye"
+      class="img-fluid"
+    >
+  </a>
+                </div>
+                <div>
+                  <a
+                    href="https://tisenye.com/"
+                    class="sidebar-title fs-5 fw-bold text-decoration-none"
+                  >
+                    Tisen
+                  </a>
+                </div>
+              </div>
+
+              <div class="sidebar-nav list-group my-auto rounded-0 text-start"><a
+        href="https://tisenye.com/"
+        class="sidebar-nav-item list-group-item list-group-item-action border border-0"
+        data-bs-toggle="tooltip" data-bs-title="Home"
+      >
+        <span class="sidebar-nav-icon bi bi-house ms-2 me-1 fs-4"></span>
+        <span class="sidebar-nav-text">Home</span>
+      </a><a
+        href="https://tisenye.com/blog/"
+        class="sidebar-nav-item list-group-item list-group-item-action border border-0"
+        data-bs-toggle="tooltip" data-bs-title="Post"
+      >
+        <span class="sidebar-nav-icon bi bi-file-earmark-text ms-2 me-1 fs-4"></span>
+        <span class="sidebar-nav-text">Post</span>
+      </a><a
+        href="https://tisenye.com/projects/"
+        class="sidebar-nav-item list-group-item list-group-item-action border border-0"
+        data-bs-toggle="tooltip" data-bs-title="Projects"
+      >
+        <span class="sidebar-nav-icon bi bi-terminal ms-2 me-1 fs-4"></span>
+        <span class="sidebar-nav-text">Projects</span>
+      </a><a
+        href="https://tisenye.github.io/categories"
+        class="sidebar-nav-item list-group-item list-group-item-action border border-0"
+        data-bs-toggle="tooltip" data-bs-title="Categories"
+      >
+        <span class="sidebar-nav-icon bi bi-bookmarks ms-2 me-1 fs-4"></span>
+        <span class="sidebar-nav-text">Categories</span>
+      </a></div>
+
+              <div class="sidebar-social mt-4 pb-4 px-3">
+                <div class="container-fluid">
+                  <div class="row justify-content-center">
+                    <div class="col-auto px-2">
+        <a
+          href="mailto:1600037849@qq.com"
+          target="_blank" rel="noopener noreferrer"
+          data-bs-toggle="tooltip"
+          data-bs-title='Email'
+          class="text-decoration-none"
+        >
+          <span class="bi bi-envelope-fill"></span>
+        </a>
+      </div><div class="col-auto px-2">
+        <a
+          href="https://github.com/TisenYe"
+          target="_blank" rel="noopener noreferrer"
+          data-bs-toggle="tooltip"
+          data-bs-title='GitHub'
+          class="text-decoration-none"
+        >
+          <span class="bi bi-github"></span>
+        </a>
+      </div><div class="col-auto px-2">
+        <a
+          href="https://twitter.com/"
+          target="_blank" rel="noopener noreferrer"
+          data-bs-toggle="tooltip"
+          data-bs-title='Twitter'
+          class="text-decoration-none"
+        >
+          <span class="bi bi-twitter"></span>
+        </a>
+      </div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="searchModal" tabindex="-1" aria-labelledby="searchModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="searchModalLabel">
+          Search
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div
+          id="searchInput" role="search" 
+          class="d-flex mb-3 border rounded-5 bg-white"
+        >
+          <input
+            id="search" type="search"
+            class="form-control border border-0 rounded-5 rounded-end"
+            placeholder="Search"
+            aria-label="Search"
+          >
+          <div class="rounded-5 rounded-start py-2 ps-2 pe-3">
+            <span class="bi bi-search"></span>
+          </div>
+        </div>
+        <div class="search-results">
+          <div class="search-results__items">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+  <script src="https://tisenye.com/assets/js/bootstrap/bootstrap.bundle.min.js"></script>
+  <script>
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+    const myModal = document.getElementById('searchModal');
+    const myInput = document.getElementById('searchInput');
+
+    myModal.addEventListener('shown.bs.modal', () => {
+      myInput.focus()
+    });
+  </script>
+  <script src="https://tisenye.com/elasticlunr.min.js"></script>
+  <script src="https://tisenye.com/search_index.en.js"></script><script src="https://tisenye.com/assets/js/search/search.js"></script>
+</body>
+</html>

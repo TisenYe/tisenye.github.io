@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>Tisen - kernel</title>
+    <subtitle>Blog</subtitle>
+    <link rel="self" type="application/atom+xml" href="https://tisenye.com/categories/kernel/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://tisenye.com/"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2025-10-20T00:00:00+00:00</updated>
+    <id>https://tisenye.com/categories/kernel/atom.xml</id>
+    <entry xml:lang="en">
+        <title>BPF Source reader [1]</title>
+        <published>2025-10-20T00:00:00+00:00</published>
+        <updated>2025-10-20T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://tisenye.com/blog/bpf-source-reader-1/"/>
+        <id>https://tisenye.com/blog/bpf-source-reader-1/</id>
+        
+        <content type="html" xml:base="https://tisenye.com/blog/bpf-source-reader-1/">&lt;blockquote&gt;
+&lt;p&gt;分析源码版本为 Linux-6.16&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h2 id=&quot;bpf-attr&quot;&gt;bpf_attr&lt;&#x2F;h2&gt;
+&lt;p&gt;bpf_attr 是一个 union 其中包含了很多匿名结构体和命名结构体以一种紧凑且模块化的方式表达多个不同的参数集合。在 bpf 中会通过 cmd 来区分如何解析 bpf_attr。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;c&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-c &quot;&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; include&#x2F;uapi&#x2F;linux&#x2F;bpf.h
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;union &lt;&#x2F;span&gt;&lt;span&gt;bpf_attr {
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; 通过 BPF_MAP_CREATE 来解析
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* anonymous struct used by BPF_MAP_CREATE command *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;		__u32	map_type;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* one of enum bpf_map_type *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;		__u32	key_size;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* size of key in bytes *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;		...
+&lt;&#x2F;span&gt;&lt;span&gt;	};
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; 通过 BPF_MAP_*_ELEM 来解析
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* anonymous struct used by BPF_MAP_*_ELEM commands *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;		__u32		map_fd;
+&lt;&#x2F;span&gt;&lt;span&gt;		__aligned_u64	key;
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;union &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;			__aligned_u64 value;
+&lt;&#x2F;span&gt;&lt;span&gt;			__aligned_u64 next_key;
+&lt;&#x2F;span&gt;&lt;span&gt;		};
+&lt;&#x2F;span&gt;&lt;span&gt;		__u64		flags;
+&lt;&#x2F;span&gt;&lt;span&gt;	};
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; 通过 BPF_MAP_*_BATCH 来解析
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* struct used by BPF_MAP_*_BATCH commands *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;		__aligned_u64	in_batch;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* start batch,
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;						 * NULL to start from beginning
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;						 *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;		...
+&lt;&#x2F;span&gt;&lt;span&gt;	} batch;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;sys-bpf&quot;&gt;__sys_bpf&lt;&#x2F;h2&gt;
+&lt;p&gt;通过 bpf 系统调用  执行 &lt;code&gt;__sys_bpf&lt;&#x2F;code&gt; 内核内部的通用实现函数。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;c&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-c &quot;&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; kernel&#x2F;bpf&#x2F;syscall.c
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; 用户态通过系统调用 bpf 触发 __sys_bpf
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;SYSCALL_DEFINE3&lt;&#x2F;span&gt;&lt;span&gt;(bpf, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int&lt;&#x2F;span&gt;&lt;span&gt;, cmd, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;union&lt;&#x2F;span&gt;&lt;span&gt; bpf_attr __user *, uattr, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;unsigned int&lt;&#x2F;span&gt;&lt;span&gt;, size)
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;__sys_bpf&lt;&#x2F;span&gt;&lt;span&gt;(cmd, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;USER_BPFPTR&lt;&#x2F;span&gt;&lt;span&gt;(uattr), size);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; 内核态调用 bpf_sys_bpf 来触发 __sys_bpf
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;BPF_CALL_3&lt;&#x2F;span&gt;&lt;span&gt;(bpf_sys_bpf, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int&lt;&#x2F;span&gt;&lt;span&gt;, cmd, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;union&lt;&#x2F;span&gt;&lt;span&gt; bpf_attr *, attr, u32, attr_size)
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;switch &lt;&#x2F;span&gt;&lt;span&gt;(cmd) {
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_CREATE:
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_DELETE_ELEM:
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_UPDATE_ELEM:
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_FREEZE:
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_GET_FD_BY_ID:
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_PROG_LOAD:
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_BTF_LOAD:
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_LINK_CREATE:
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_RAW_TRACEPOINT_OPEN:
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;default&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span&gt;-EINVAL;
+&lt;&#x2F;span&gt;&lt;span&gt;	}
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;__sys_bpf&lt;&#x2F;span&gt;&lt;span&gt;(cmd, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;KERNEL_BPFPTR&lt;&#x2F;span&gt;&lt;span&gt;(attr), attr_size);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;__sys_bpf()&lt;&#x2F;code&gt; 是 Linux 内核中 &lt;strong&gt;BPF 系统调用实现的核心函数&lt;&#x2F;strong&gt;。&lt;&#x2F;p&gt;
+&lt;p&gt;它是 BPF 子系统的“系统调用调度器”指挥 bpf 指令安全的前往目的地，它做了三件事：&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;安全检查与参数复制（用户态 or 内核态）&lt;&#x2F;strong&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;调用安全框架（LSM hook）&lt;&#x2F;strong&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;根据命令号分派到具体实现函数&lt;&#x2F;strong&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;c&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-c &quot;&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; kernel&#x2F;bpf&#x2F;syscall.c
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;static int &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;__sys_bpf&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;enum&lt;&#x2F;span&gt;&lt;span&gt; bpf_cmd &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;cmd&lt;&#x2F;span&gt;&lt;span&gt;, bpfptr_t &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;uattr&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;unsigned int &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;size&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;union&lt;&#x2F;span&gt;&lt;span&gt; bpf_attr attr;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int&lt;&#x2F;span&gt;&lt;span&gt; err;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* bpf_check_uarg_tail_zero 是一个安全检查函数。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;   	     * 参数 uattr 是一个 bpfptr_t，可能来自用户空间，也可能来自内核空间。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;   	     * 它的主要作用是确保用户空间传递过来的结构体参数，
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;   	     * 如果比内核已知的结构体更大，多出来的部分必须全部为零。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;   	     * 这样可以防止新版本用户空间依赖内核尚未支持的扩展字段，保证内核的兼容性和安全性。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;   	     *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_check_uarg_tail_zero&lt;&#x2F;span&gt;&lt;span&gt;(uattr, sizeof(attr), size);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;if &lt;&#x2F;span&gt;&lt;span&gt;(err)
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return&lt;&#x2F;span&gt;&lt;span&gt; err;
+&lt;&#x2F;span&gt;&lt;span&gt;	size = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;min_t&lt;&#x2F;span&gt;&lt;span&gt;(u32, size, sizeof(attr));
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* copy attributes from user space, may be less than sizeof(bpf_attr) *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;memset&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;, sizeof(attr));
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;if &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;copy_from_bpfptr&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr, size) != &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span&gt;-EFAULT;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* security_bpf实现了对 LSM（Linux Security Module）的注册。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;	 * 通过 call_int_hook(bpf, cmd, attr, size, kernel); 宏
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;	 * 分发给所有注册的安全模块（SELinux、AppArmor、Landlock 等）去审查。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;	 *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;security_bpf&lt;&#x2F;span&gt;&lt;span&gt;(cmd, &amp;amp;attr, size, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;is_kernel&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;if &lt;&#x2F;span&gt;&lt;span&gt;(err &amp;lt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return&lt;&#x2F;span&gt;&lt;span&gt; err;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* bpf 具体实现的入口，通过 cmd 来区分作用
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;	 *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;switch &lt;&#x2F;span&gt;&lt;span&gt;(cmd) {
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* Map 是 BPF 的“共享内存”，用于用户态和 BPF 程序之间传递数据。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;           * 下面的都是 Map 的增删改查等基础操作接口。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;           *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_CREATE:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;map_create&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;is_kernel&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_LOOKUP_ELEM:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;map_lookup_elem&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_UPDATE_ELEM:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;map_update_elem&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_DELETE_ELEM:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;map_delete_elem&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_GET_NEXT_KEY:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;map_get_next_key&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_FREEZE:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;map_freeze&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* 将 BPF 程序加载进内核，经过 verifier 验证后生成一个可执行的内核对象。返回一个 FD。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;	 *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_PROG_LOAD:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_prog_load&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr, size);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;         &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* 把 BPF 对象（map&#x2F;prog&#x2F;link）固定（pin）到 &#x2F;sys&#x2F;fs&#x2F;bpf，实现跨进程持久化。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;          *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_OBJ_PIN:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_obj_pin&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;         &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* 从 bpffs 路径重新打开一个 pinned 对象。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;          *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_OBJ_GET:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_obj_get&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;         &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* 把程序 attach&#x2F;detach 到某个 hook 点（如 cgroup、kprobe、tracepoint、XDP、tc 等）。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;          *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_PROG_ATTACH:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_prog_attach&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_PROG_DETACH:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_prog_detach&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* 查询某个 hook 上挂了哪些程序。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;           *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_PROG_QUERY:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_prog_query&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;user&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_PROG_TEST_RUN:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_prog_test_run&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;user&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_PROG_GET_NEXT_ID:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_obj_get_next_id&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;user&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;					  &amp;amp;prog_idr, &amp;amp;prog_idr_lock);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_GET_NEXT_ID:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_obj_get_next_id&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;user&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;					  &amp;amp;map_idr, &amp;amp;map_idr_lock);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_BTF_GET_NEXT_ID:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_obj_get_next_id&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;user&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;					  &amp;amp;btf_idr, &amp;amp;btf_idr_lock);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_PROG_GET_FD_BY_ID:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_prog_get_fd_by_id&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_GET_FD_BY_ID:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_map_get_fd_by_id&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_OBJ_GET_INFO_BY_FD:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_obj_get_info_by_fd&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;user&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_RAW_TRACEPOINT_OPEN:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_raw_tracepoint_open&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* BTF 是 BPF 的类型系统描述信息，
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;           * 用于支持高级调试、符号、CO-RE（Compile Once, Run Everywhere）。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;           * BPF_BTF_LOAD 把 BTF 类型信息加载进内核。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;           *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_BTF_LOAD:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_btf_load&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr, size);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_BTF_GET_FD_BY_ID:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_btf_get_fd_by_id&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_TASK_FD_QUERY:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_task_fd_query&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;user&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_LOOKUP_AND_DELETE_ELEM:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;map_lookup_and_delete_elem&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;         &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* 批量操作 map，性能优化接口。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;          *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_LOOKUP_BATCH:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_map_do_batch&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;user&lt;&#x2F;span&gt;&lt;span&gt;, BPF_MAP_LOOKUP_BATCH);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_LOOKUP_AND_DELETE_BATCH:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_map_do_batch&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;user&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;				       BPF_MAP_LOOKUP_AND_DELETE_BATCH);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_UPDATE_BATCH:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_map_do_batch&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;user&lt;&#x2F;span&gt;&lt;span&gt;, BPF_MAP_UPDATE_BATCH);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_MAP_DELETE_BATCH:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_map_do_batch&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;user&lt;&#x2F;span&gt;&lt;span&gt;, BPF_MAP_DELETE_BATCH);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* BPF Link 是一种“持久 attach”机制。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;           * 它把“程序-挂载点”的绑定变成一个独立对象，可安全更新、替换、销毁。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;           * 创建一个 link，把 BPF 程序挂到指定 hook（tracepoint、LSM、cgroup、perf_event 等）。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;           *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_LINK_CREATE:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;link_create&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_LINK_UPDATE:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;link_update&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_LINK_GET_FD_BY_ID:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_link_get_fd_by_id&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_LINK_GET_NEXT_ID:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_obj_get_next_id&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;user&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;					  &amp;amp;link_idr, &amp;amp;link_idr_lock);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;         &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* 启用全局 BPF 统计数据（运行次数、验证器信息等）。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;          *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_ENABLE_STATS:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_enable_stats&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;         &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* 创建 BPF iterator（用 BPF 迭代内核数据结构，比如任务、sockets）。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;          *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_ITER_CREATE:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_iter_create&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_LINK_DETACH:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;link_detach&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;         &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;* 将 map 绑定到程序上，作为其持久依赖（防止被意外释放）。
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;          *&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_PROG_BIND_MAP:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_prog_bind_map&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_TOKEN_CREATE:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;token_create&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr);
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;default&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;		err = -EINVAL;
+&lt;&#x2F;span&gt;&lt;span&gt;		&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;	}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return&lt;&#x2F;span&gt;&lt;span&gt; err;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;bpftrace-ming-ling-de-yun-xing-guo-cheng-nei-he-bpfluo-ji&quot;&gt;bpftrace 命令的运行过程——内核BPF逻辑&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;code&gt;bpftrace&lt;&#x2F;code&gt; 是一个前端，通过编译字节码将BPF指令送入内核，由内核执行具体的BPF逻辑，其过程如下：&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;它把脚本（&lt;code&gt;BEGIN {}&lt;&#x2F;code&gt;, &lt;code&gt;kprobe:xxx {}&lt;&#x2F;code&gt;）解析成 &lt;strong&gt;AST（抽象语法树）&lt;&#x2F;strong&gt;。&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;然后将其编译为 &lt;strong&gt;BPF 字节码（BPF 指令集）&lt;&#x2F;strong&gt;。&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;BPF 是一套独立于架构的指令系统，有自己的寄存器模型和栈。&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;指令例如：&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;asm&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-asm &quot;&gt;&lt;code class=&quot;language-asm&quot; data-lang=&quot;asm&quot;&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;r1 = ctx
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;call &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;bpf_get_current_comm
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;call &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;bpf_trace_printk
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;bpftrace&lt;&#x2F;code&gt; 通过 &lt;code&gt;libbpf&lt;&#x2F;code&gt; 或 &lt;code&gt;bpf()&lt;&#x2F;code&gt; 系统调用将这些字节码送入内核：&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;c&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-c &quot;&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;syscall&lt;&#x2F;span&gt;&lt;span&gt;(__NR_bpf, BPF_PROG_LOAD, &amp;amp;attr, sizeof(attr));
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;attr&lt;&#x2F;code&gt; 中包含：&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;程序类型（如 &lt;code&gt;BPF_PROG_TYPE_KPROBE&lt;&#x2F;code&gt;）&lt;&#x2F;li&gt;
+&lt;li&gt;指令指针和大小&lt;&#x2F;li&gt;
+&lt;li&gt;license、附加选项等信息&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;系统调用 &lt;code&gt;bpf()&lt;&#x2F;code&gt; 通过 &lt;code&gt;BPF_PROG_LOAD&lt;&#x2F;code&gt; 执行 &lt;code&gt;bpf_prog_load&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;c&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-c &quot;&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;case&lt;&#x2F;span&gt;&lt;span&gt; BPF_BTF_LOAD:
+&lt;&#x2F;span&gt;&lt;span&gt;	err = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bpf_btf_load&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;attr, uattr, size);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;加载阶段：&lt;code&gt;bpf_prog_load()&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;主要流程：&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;分配内核内存&lt;&#x2F;strong&gt; 用于存放 BPF 指令代码。&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;根据程序类型&lt;&#x2F;strong&gt;（如 KPROBE、TRACEPOINT、XDP）选择一个运行环境。&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;调用 verifier（验证器）&lt;&#x2F;strong&gt; 进行安全审查。&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;ul&gt;
+&lt;li&gt;验证内容包括：
+&lt;ul&gt;
+&lt;li&gt;是否有非法内存访问。&lt;&#x2F;li&gt;
+&lt;li&gt;是否可能死循环。&lt;&#x2F;li&gt;
+&lt;li&gt;栈空间是否越界。&lt;&#x2F;li&gt;
+&lt;li&gt;函数调用是否合法。&lt;&#x2F;li&gt;
+&lt;li&gt;map 操作是否类型匹配。&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;验证器会构建一个 &lt;strong&gt;控制流图（CFG）&lt;&#x2F;strong&gt; 并模拟执行每条指令。&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;&lt;strong&gt;如果通过验证&lt;&#x2F;strong&gt;，就会把字节码交给 JIT 编译器（&lt;code&gt;bpf_prog_select_runtime&lt;&#x2F;code&gt;）。&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;JIT 编译阶段：&lt;code&gt;bpf_int_jit_compile()&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;JIT（Just-In-Time 编译器）将 BPF 字节码翻译成当前 CPU 架构的原生机器码。&lt;&#x2F;p&gt;
+&lt;p&gt;举个例子：&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;asm&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-asm &quot;&gt;&lt;code class=&quot;language-asm&quot; data-lang=&quot;asm&quot;&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;r0 = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;call &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;bpf_get_current_comm
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;在 ARM64 上可能变成：&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;asm&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-asm &quot;&gt;&lt;code class=&quot;language-asm&quot; data-lang=&quot;asm&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mov &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;x0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;sp
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bl  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;&amp;lt;bpf_get_current_comm&amp;gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mov &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;x0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;ret
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;这样一来，执行效率几乎等同于原生内核函数。&lt;&#x2F;p&gt;
+&lt;p&gt;JIT 编译的结果会缓存下来（&#x2F;sys&#x2F;kernel&#x2F;debug&#x2F;tracing&#x2F;jit_dump 可查看）。&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Attach 阶段：建立触发点（Hook）&lt;&#x2F;p&gt;
+&lt;p&gt;加载完 BPF 程序后，bpftrace 再调用：&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;c&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-c &quot;&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;sys_bpf&lt;&#x2F;span&gt;&lt;span&gt;(BPF_RAW_TRACEPOINT_OPEN, &amp;amp;attr, sizeof(attr));
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;或&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;c&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-c &quot;&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;sys_bpf&lt;&#x2F;span&gt;&lt;span&gt;(BPF_LINK_CREATE, &amp;amp;attr, sizeof(attr));
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;这些命令会把 BPF 程序挂到指定的 hook：&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;kprobe:sys_open&lt;&#x2F;code&gt; → kernel probe，拦截内核函数入口&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;tracepoint:sched:sched_process_exec&lt;&#x2F;code&gt; → tracepoint hook&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;uprobe:&#x2F;bin&#x2F;bash:malloc&lt;&#x2F;code&gt; → user-space probe&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;BEGIN {}&lt;&#x2F;code&gt; → tracepoint “fake event”&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;内核通过 &lt;code&gt;bpf_link&lt;&#x2F;code&gt; 或 &lt;code&gt;perf_event&lt;&#x2F;code&gt; 把这个程序注册到对应钩子点。
+当钩子被触发时，BPF 程序就会执行。&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;执行阶段：内核执行 BPF 程序&lt;&#x2F;p&gt;
+&lt;p&gt;当事件发生（比如 &lt;code&gt;sys_open()&lt;&#x2F;code&gt; 被调用）时：&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;内核执行 kprobe 框架中的通知逻辑：&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;c&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-c &quot;&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;for&lt;&#x2F;span&gt;&lt;span&gt; each attached BPF program:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;run_bpf_prog&lt;&#x2F;span&gt;&lt;span&gt;(prog, ctx)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;run_bpf_prog()&lt;&#x2F;code&gt; 进入 &lt;code&gt;bpf_prog_run_xxx()&lt;&#x2F;code&gt;，执行 BPF 虚拟机或已 JIT 的机器码。&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;BPF 程序通过 helper 调用访问内核信息：&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;bpf_get_current_pid_tgid()&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;bpf_trace_printk()&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;bpf_map_lookup_elem()&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;bpf_ktime_get_ns()&lt;&#x2F;code&gt; 等。&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;程序运行结果可能：&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;写入 BPF map&lt;&#x2F;li&gt;
+&lt;li&gt;通过 perfbuf 或 ringbuf 发消息到用户态&lt;&#x2F;li&gt;
+&lt;li&gt;返回过滤判断（比如 XDP drop&#x2F;pass）&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;用户态收集结果&lt;&#x2F;p&gt;
+&lt;p&gt;bpftrace 监听这些 buffer：&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;perf event buffer&lt;&#x2F;strong&gt;：事件型输出（比如 &lt;code&gt;printf()&lt;&#x2F;code&gt;）&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;maps&lt;&#x2F;strong&gt;：周期性查询统计数据（比如 &lt;code&gt;@count&lt;&#x2F;code&gt;）&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;ring buffer&lt;&#x2F;strong&gt;：零拷贝高性能传输。&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;bpftrace 会在后台用 epoll 监听这些文件描述符，当有数据可读时输出结果。&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;结束与卸载&lt;&#x2F;p&gt;
+&lt;p&gt;当用户 Ctrl+C 或程序退出：&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;bpftrace 调用 &lt;code&gt;close(fd)&lt;&#x2F;code&gt;。&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;内核引用计数减少。&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;当没有引用时：&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;程序（&lt;code&gt;bpf_prog&lt;&#x2F;code&gt;）&lt;&#x2F;li&gt;
+&lt;li&gt;maps&lt;&#x2F;li&gt;
+&lt;li&gt;link&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;都会通过 RCU 延迟释放。&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+</content>
+        
+    </entry>
+</feed>
